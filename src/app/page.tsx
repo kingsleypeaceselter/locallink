@@ -1,50 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react"; // Added useState
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
-export default function RootPage() {
+// This is a minimal, guaranteed-to-run version of your feed page.
+export default function FeedPage() {
   const router = useRouter();
-  const [error, setError] = useState(false); // Add error state
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function checkSession() {
+    async function checkAuth() {
       try {
-        // Set a timeout of 5 seconds
-        const { data: { session }, error: sessionError } = await Promise.race([
-            supabase.auth.getSession(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))
-        ]);
-
-        if (sessionError) throw sessionError;
-
-        if (session) {
-          router.push("/feed");
-        } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
           router.push("/auth");
+          return;
         }
+        setLoading(false);
       } catch (err) {
-        console.error("Session check failed:", err);
-        setError(true); // Trigger the error state
+        setError("Failed to connect: " + (err as Error).message);
+        setLoading(false);
       }
     }
-    checkSession();
+    checkAuth();
   }, [router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading your feed...</p>
+      </div>
+    );
+  }
 
   if (error) {
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen">
-            <p>Connection issue. Please refresh or check your internet.</p>
-            <button onClick={() => window.location.reload()}>Retry</button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center text-red-600">
+        <p>{error}</p>
+      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-warm-white flex flex-col items-center justify-center gap-2">
-      <div className="w-6 h-6 border-2 border-dark border-t-transparent rounded-full animate-spin" />
-      <p className="text-xs text-muted">Loading LocalLink...</p>
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">LocalLink Feed</h1>
+      <p>Success! You are logged in.</p>
     </div>
   );
 }
