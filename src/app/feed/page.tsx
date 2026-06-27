@@ -9,26 +9,43 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Failsafe: Force stop the spinner after 6 seconds
+    // Failsafe: stop loading after 5 seconds no matter what
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 6000);
+      console.log("Failsafe: Forced stop.");
+    }, 5000);
 
-    const init = async () => {
+    async function checkAuth() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) router.push("/auth");
-        else setLoading(false);
-      } catch (e) {
-        console.error("Auth check failed", e);
-        setLoading(false); // Stop spinning if error occurs
+        if (!user) {
+          router.push("/auth");
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Auth check failed:", err);
+        setLoading(false); // Stop spinning on error
       } finally {
         clearTimeout(timer);
       }
-    };
-    init();
+    }
+
+    checkAuth();
+    return () => clearTimeout(timer);
   }, [router]);
 
-  if (loading) return <div>Loading...</div>;
-  return <div>Feed Loaded Successfully</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Syncing live marketplace data... (If this stays, check Console for Errors)</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8">
+      <h1>Feed Loaded</h1>
+    </div>
+  );
 }
